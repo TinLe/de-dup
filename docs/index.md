@@ -45,6 +45,7 @@ Oriented toward developers and contributors who want to understand the codebase,
 * **[System Architecture](developer_guide/architecture.md)**: Clean Architecture / Model-View-Presenter (MVP) and pub-sub broadcaster design.
 * **[Rust Engine Pipeline](developer_guide/rust_engine.md)**: PyO3 native module, Rayon parallel crawler, WalkDir, and SIMD MD5 hasher.
 * **[Component Catalog](developer_guide/components.md)**: Deep dive into `core/`, `hscommon/`, `web/`, `run_desktop.py`, and `rust_engine/`.
+* **[REST API Reference](developer_guide/api_reference.md)**: Complete specification of all HTTP endpoints, payloads, query parameters, and responses.
 * **[Data Flow & Lifecycles](developer_guide/data_flow.md)**: Application boot, scanning lifecycles, and result generation pipelines.
 * **[Building from Source](developer_guide/building.md)**: Compiling C/Rust extensions, setting up virtualenvs, and running Makefile targets.
 * **[Contributing Standards](developer_guide/contributing.md)**: Code style, unit testing (`pytest`), and pre-commit hooks.

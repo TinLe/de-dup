@@ -27,6 +27,7 @@ Our comprehensive documentation is organized into two main guides:
   - [System Architecture](docs/developer_guide/architecture.md)
   - [Rust Engine Pipeline](docs/developer_guide/rust_engine.md)
   - [Component Catalog](docs/developer_guide/components.md)
+  - [REST API Reference](docs/developer_guide/api_reference.md)
   - [Data Flow & Lifecycles](docs/developer_guide/data_flow.md)
   - [Building from Source](docs/developer_guide/building.md)
   - [Contributing Standards](docs/developer_guide/contributing.md)

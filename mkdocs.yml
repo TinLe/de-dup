@@ -46,6 +46,7 @@ nav:
       - System Architecture: developer_guide/architecture.md
       - Rust Engine Pipeline: developer_guide/rust_engine.md
       - Component Catalog: developer_guide/components.md
+      - REST API Reference: developer_guide/api_reference.md
       - Data Flow & Lifecycles: developer_guide/data_flow.md
       - Building from Source: developer_guide/building.md
       - macOS / OS X Build Guide: build/macos.md
