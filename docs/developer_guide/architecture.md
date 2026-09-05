@@ -1,46 +1,64 @@
 # System Architecture & Design Patterns
 
-**de-dup** enforces a clean separation of concerns using a **Model-View-Presenter (MVP)** architectural pattern, augmented by a custom **Broadcaster** pub-sub message system and a native **Rust Engine** interface layer.
+**de-dup** enforces a clean separation of concerns using a **Decoupled Service-Pipeline Architecture**, augmented by a native **Rust Engine** interface layer and multi-threaded background task execution.
 
 ---
 
-## Architectural Diagram
+## Architectural Overview
 
 ```mermaid
 graph TD
     subgraph Frontend Interfaces
-        DesktopShell[pywebview Native Desktop Shell]
-        WebConsole[HTML Web Console]
-        RESTServer[REST HTTP Server - web/server.py]
+        DesktopShell[pywebview Native Desktop Shell - run_desktop.py]
+        WebConsole[Glassmorphic Web Console - web/static]
+        RESTServer[Threaded REST HTTP Server - web/server.py]
     end
 
-    subgraph Service & Pipeline Layer
-        TaskRunner[TaskRunner / Service Orchestrator]
-        Pipeline[Discovery / Hasher / Matcher Pipeline]
+    subgraph Application & Service Layer
+        ServerState[Thread-Safe ServerState]
+        TaskRunner[TaskRunner & TaskExecution Service]
         DeletionService[FileDeletionService]
+    end
+
+    subgraph Pipeline Layer
+        Discovery[FileDiscovery]
+        Hasher[ContentHasher]
+        Matcher[DuplicateMatcher]
+        CrossMatcher[CrossDBMatcher]
     end
 
     subgraph Native Engine & Storage
         PyO3[PyO3 Bridge]
-        RustEngine[Rust Parallel Rayon Engine]
-        CacheDB[(SQLite WAL DBEngine / Valkey Redis)]
+        RustEngine[Rust Parallel Rayon Engine - dupeguru_rust]
+        DBEngine[SQLite WAL DBEngine]
+        TaskRepo[TaskRepository]
     end
 
     DesktopShell --> RESTServer
     WebConsole --> RESTServer
+    RESTServer --> ServerState
     RESTServer --> TaskRunner
     RESTServer --> DeletionService
-    TaskRunner --> Pipeline
-    Pipeline --> PyO3
-    Pipeline --> CacheDB
+    RESTServer --> TaskRepo
+    TaskRunner --> Discovery
+    TaskRunner --> Hasher
+    TaskRunner --> Matcher
+    Discovery --> DBEngine
+    Discovery -.->|Optional Acceleration| PyO3
+    Hasher --> DBEngine
+    Hasher -.->|Optional Acceleration| PyO3
+    Matcher --> DBEngine
+    CrossMatcher --> DBEngine
     PyO3 --> RustEngine
-    RustEngine --> CacheDB
+    TaskRepo --> DBEngine
 ```
 
 ---
 
 ## Key Design Principles
 
-1. **Decoupled Architecture**: Frontend UI implementations (`pywebview` desktop window, web browsers, CLI) never interact directly with low-level SQLite tables or C-extensions. They communicate through clean REST endpoints and service layer contracts.
-2. **Native Extension Layer (PyO3)**: Heavy CPU-bound and disk-bound tasks (file crawling, checksum calculation, database persistence) delegate to compiled Rust shared libraries (`dupeguru_rust.so`).
-3. **Headless & Embedded Compatibility**: The core application logic and pipelines operate independently of GUI display servers, allowing seamless execution on servers, NAS appliances, or desktop windows.
+1. **Decoupled Frontends**: Neither the `pywebview` native desktop shell nor the HTML Web UI directly interacts with physical disk crawling or SQLite database handles. They communicate strictly through standardized REST API endpoints and JSON contracts.
+2. **Non-Blocking Background Orchestration**: The web server request threads are strictly non-blocking. File crawling, two-stage checksum calculation, duplicate matching, and large batch file deletions execute on dedicated background daemon threads managed by `TaskRunner` and `TaskExecution`.
+3. **In-Memory Polling Isolation**: The web UI polls `GET /api/status` at 500ms intervals. To prevent SQLite write lock contention, active counters (`file_count`, `hashed_count`, `progress_percentage`, and status messages) are cached in memory and served directly without querying SQLite.
+4. **Native Extension Layer (PyO3)**: CPU-intensive operations (recursive directory crawling, SIMD MD5 hashing) leverage the compiled Rust shared library (`dupeguru_rust.so`). If Rust is not built in the local environment, the pipeline seamlessly falls back to pure Python multi-threaded implementations (`concurrent.futures.ThreadPoolExecutor`, `xxhash`, `hashlib`).
+5. **Headless & Server Compatibility**: The core application services and HTTP server operate completely independently of any X11 or Wayland GUI display server, making de-dup fully portable to Linux servers, headless containers, and NAS systems.
